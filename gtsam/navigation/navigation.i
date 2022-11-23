@@ -150,6 +150,16 @@ virtual class ImuFactor: gtsam::NonlinearFactor {
       const gtsam::imuBias::ConstantBias& bias);
 };
 
+virtual class ImuGyroFactor: gtsam::NonlinearFactor {
+  ImuGyroFactor(size_t pose_i, size_t pose_j, size_t bias,
+      const gtsam::PreintegratedImuMeasurements& preintegratedMeasurements);
+
+  // Standard Interface
+  gtsam::PreintegratedImuMeasurements preintegratedMeasurements() const;
+  Vector evaluateError(const gtsam::Pose3& pose_i, const gtsam::Pose3& pose_j,
+      const gtsam::imuBias::ConstantBias& bias);
+};
+
 #include <gtsam/navigation/CombinedImuFactor.h>
 virtual class PreintegrationCombinedParams : gtsam::PreintegrationParams {
   PreintegrationCombinedParams(Vector n_gravity);

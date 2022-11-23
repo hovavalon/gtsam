@@ -73,6 +73,7 @@ class GTSAM_EXPORT PreintegratedImuMeasurements: public PreintegrationType {
 
   friend class ImuFactor;
   friend class ImuFactor2;
+  friend class ImuGyroFactor;
 
 protected:
 
@@ -323,6 +324,76 @@ private:
 };
 // class ImuFactor2
 
+/**
+ * 
+ * @ingroup navigation
+ */
+class GTSAM_EXPORT ImuGyroFactor: public NoiseModelFactor3<Pose3, Pose3, imuBias::ConstantBias> {
+  typedef ImuGyroFactor This;
+  typedef NoiseModelFactor3<Pose3, Pose3, imuBias::ConstantBias> Base;
+
+  PreintegratedImuMeasurements _PIM_;
+
+public:
+
+  /** Shorthand for a smart pointer to a factor */
+#if !defined(_MSC_VER) && __GNUC__ == 4 && __GNUC_MINOR__ > 5
+  typedef typename boost::shared_ptr<ImuFactor> shared_ptr;
+#else
+  typedef boost::shared_ptr<ImuFactor> shared_ptr;
+#endif
+
+  /** Default constructor - only use for serialization */
+  ImuGyroFactor() {}
+
+  /**
+   * Constructor
+   * @param pose_i Previous pose key
+   * @param pose_j Current pose key
+   * @param bias   Previous bias key
+   * @param preintegratedMeasurements The preintegreated measurements since the
+   * last pose.
+   */
+  ImuGyroFactor(Key pose_i, Key pose_j, Key bias, const PreintegratedImuMeasurements& preintegratedMeasurements);
+
+  ~ImuGyroFactor() override {
+  }
+
+  /// @return a deep copy of this factor
+  gtsam::NonlinearFactor::shared_ptr clone() const override;
+
+  /// @name Testable
+  /// @{
+  GTSAM_EXPORT friend std::ostream& operator<<(std::ostream& os, const ImuGyroFactor&);
+  void print(const std::string& s = "", const KeyFormatter& keyFormatter =
+                                            DefaultKeyFormatter) const override;
+  bool equals(const NonlinearFactor& expected, double tol = 1e-9) const override;
+  /// @}
+
+  /** Access the preintegrated measurements. */
+  const PreintegratedImuMeasurements& preintegratedMeasurements() const {
+    return _PIM_;
+  }
+
+  /** implement functions needed to derive from Factor */
+
+  /// vector of errors
+  Vector evaluateError(const Pose3& pose_i, const Pose3& pose_j, const imuBias::ConstantBias& bias_i,
+      boost::optional<Matrix&> H1 = boost::none,
+      boost::optional<Matrix&> H2 = boost::none,
+      boost::optional<Matrix&> H3 = boost::none) const override;
+
+ private:
+  /** Serialization function */
+  friend class boost::serialization::access;
+  template<class ARCHIVE>
+  void serialize(ARCHIVE & ar, const unsigned int /*version*/) {
+    ar & boost::serialization::make_nvp("NoiseModelFactor3",
+         boost::serialization::base_object<Base>(*this));
+    ar & BOOST_SERIALIZATION_NVP(_PIM_);
+  }
+};
+
 template <>
 struct traits<PreintegratedImuMeasurements> : public Testable<PreintegratedImuMeasurements> {};
 
@@ -331,5 +402,8 @@ struct traits<ImuFactor> : public Testable<ImuFactor> {};
 
 template <>
 struct traits<ImuFactor2> : public Testable<ImuFactor2> {};
+
+template <>
+struct traits<ImuGyroFactor> : public Testable<ImuGyroFactor> {};
 
 } /// namespace gtsam

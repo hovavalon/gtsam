@@ -253,6 +253,53 @@ Vector ImuFactor2::evaluateError(const NavState& state_i,
 }
 
 //------------------------------------------------------------------------------
+// ImuGyroFactor methods
+//------------------------------------------------------------------------------
+ImuGyroFactor::ImuGyroFactor(Key pose_i, Key pose_j, Key bias, const PreintegratedImuMeasurements& pim) :
+    Base(noiseModel::Gaussian::Covariance(pim.preintMeasCov_), pose_i,
+         pose_j, bias), _PIM_(pim) {
+}
+
+//------------------------------------------------------------------------------
+NonlinearFactor::shared_ptr ImuGyroFactor::clone() const {
+  return boost::static_pointer_cast<NonlinearFactor>(
+      NonlinearFactor::shared_ptr(new This(*this)));
+}
+
+//------------------------------------------------------------------------------
+std::ostream& operator<<(std::ostream& os, const ImuGyroFactor& f) {
+  f._PIM_.print("preintegrated measurements:\n");
+  os << "  noise model sigmas: " << f.noiseModel_->sigmas().transpose();
+  return os;
+}
+
+//------------------------------------------------------------------------------
+void ImuGyroFactor::print(const string& s, const KeyFormatter& keyFormatter) const {
+  cout << (s.empty() ? s : s + "\n") << "ImuGyroFactor(" << keyFormatter(this->key1())
+       << "," << keyFormatter(this->key2()) << "," << keyFormatter(this->key3())
+       << ")\n";
+  cout << *this << endl;
+}
+
+//------------------------------------------------------------------------------
+bool ImuGyroFactor::equals(const NonlinearFactor& other, double tol) const {
+  const This *e = dynamic_cast<const This*>(&other);
+  const bool base = Base::equals(*e, tol);
+  const bool pim = _PIM_.equals(e->_PIM_, tol);
+  return e != nullptr && base && pim;
+}
+
+//------------------------------------------------------------------------------
+Vector ImuGyroFactor::evaluateError(const Pose3& pose_i,
+    const Pose3& pose_j,
+    const imuBias::ConstantBias& bias_i, boost::optional<Matrix&> H1,
+    boost::optional<Matrix&> H2, boost::optional<Matrix&> H3) const {
+
+  NavState state_i(pose_i, Vector3());
+  NavState predictedState_j = _PIM_.predict(state_i, bias_i);
+    
+  return _PIM_.computeErrorAndJacobians(pose_i, Vector3(), pose_j, predictedState_j.velocity(), bias_i, H1, boost::none, H2, boost::none, H3);
+}
 
 }
 // namespace gtsam
